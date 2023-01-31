@@ -62,19 +62,44 @@ class KalmanFilter():
         # @ : matrix multiplication
         self.state_mean = self.transition_matrix @ self.state_mean 
         self.state_covariance = self.transition_matrix @ self.state_covariance @ np.transpose(self.transition_matrix) + self.process_noise_matrix
-        print(self.state_mean)
 
-    # def update(self, measurement):
-        # self.kal_Gain = 
+    def update(self, measurement):
+        # measurement_prediction : Hx
+        measurement_prediction = np.dot(self.measurement_matrix, self.state_mean)
+        # measur_predict_diff : z - Hx
+        measure_predict_diff = measurement - measurement_prediction
+        # temp : HPH' + R
+        temp = self.measurement_matrix @ self.state_covariance @ np.transpose(self.measurement_matrix) + self.measurement_uncertainty
+        # kalman gain calculation
+        kalman_gain = self.state_covariance @ np.transpose(self.measurement_matrix) @ np.linalg.inv(temp)
+        # update estimate with measurement
+        self.state_mean = self.state_mean + kalman_gain @ measure_predict_diff
+        # update covariance matrix
+        self.state_covariance = np.dot((np.eye(np.shape(self.state_covariance)[0]) - np.dot(kalman_gain, self.measurement_matrix)), self.state_covariance)
+
+        return self.state_mean[0], self.state_mean[3]
 
 
 # dt : 0.04, process_noise : 0.3 (standard derivation of process noise matrix)
-test = KalmanFilter(0.04, 0.3, 3, 1, 1)
+# measurement_noise = 0.1 
+
+initial_mean = [0, 0, 0, 0, 0, 0]
+initial_covariance = np.eye(6) * 500
+test = KalmanFilter(0.04, 0.3, 0.1, initial_mean, initial_covariance)
+
 # input : X_center, Y_center (measurement)
+x_predict = []
+y_predict = []
+for i in range(len(t)):
+    test.predict()
+    temp_x, temp_y = test.update(np.array([measure_x[i], measure_y[i]]))
+    x_predict.append(temp_x)
+    y_predict.append(temp_y)
 
 # output : real center (prediction)
 
 # plot input value
 plt.plot(measure_x, measure_y)
+plt.plot(x_predict, y_predict)
 plt.grid()
 plt.show()
